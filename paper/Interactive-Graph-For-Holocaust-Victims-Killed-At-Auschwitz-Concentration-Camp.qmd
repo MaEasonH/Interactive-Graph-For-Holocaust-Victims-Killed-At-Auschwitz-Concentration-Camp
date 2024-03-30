@@ -1,0 +1,114 @@
+---
+title: "Interactive-Graph-For-Holocaust-Victims-Killed-At-Auschwitz-Concentration-Camp"
+subtitle: "Tell Story By Numbers"
+author: Heng Ma 
+thanks: "Code and data are available at:https://github.com/MaEasonH/Interactive-Graph-For-Holocaust-Victims-Killed-At-Auschwitz-Concentration-Camp.git."
+date: "`r format(Sys.time(), '%m/%d/%Y')`"
+abstract: "This article bridges the ethical use of historical databases and the need for respectful storytelling as espoused by Jamelle Bouie. It presents an interactive table that records the ethnicities and fatalities of Holocaust victims at Auschwitz, demonstrating how to convey personal narratives with dignity within quantitative analysis. Drawing from Bouie's themes, the piece elucidates the construction and function of the interactive chart, using the Shiny application in R. It illustrates a method for engaging with and understanding history, emphasizing the personal dimension behind each data point, to ensure the memory of the victims is preserved with integrity and their stories told with due honor."
+format: pdf
+toc: TRUE
+bibliography: references.bib
+---
+
+## introduction
+
+The essence of this article is grounded in the themes presented by Jamelle Bouie in "We Still Can’t See American Slavery for What It Was," underscoring the significance of databases like SlaveVoyages, which offer detailed insights into the slave trade. Bouie delves into the ethical considerations of handling and presenting this data, highlighting the paramount importance of not dismissing the human stories behind the figures. This necessitates a careful balance between quantitative analysis and attention to the personal experiences of enslaved individuals, ensuring their narratives are conveyed with dignity and respect. Following these principles, the text has developed an interactive table detailing the ethnicities and numbers of Holocaust victims murdered at the Auschwitz concentration camp. It outlines the creation process and explains the functionality and usage of the interactive chart. By doing so, it engages with Bouie's related themes on how to interpret the stories within the numbers, ensuring the data's interactivity and authenticity to foster a deeper understanding of this historical period. The article involves data collection and utilizes the Shiny program in R to create an interactive visualization of the deportees and deaths at Auschwitz concentration camp from 1941 to 1945, categorized by ethnic origins.
+
+we use R [@R] for all data wrangling and analysis and R packages readr.[@readr],shiny[@shiny], and pdftools[@pdftools]
+
+```{r setup, include=FALSE}
+
+# Load libraries
+if(!require(ggplot2)){install.packages('ggplot2', dependencies = TRUE)}
+if(!require(readr)){install.packages('readr', dependencies = TRUE)}
+if(!require(shiny)){install.packages('shiny', dependencies = TRUE)}
+if(!require(DT)) install.packages("DT")
+if(!require(pdftools)) install.packages("pdftools")
+library(pdftools)
+library(shiny)
+library(ggplot2)
+library(DT)
+```
+
+## Data Collection
+
+This text describes data collection from Statista's "Estimated number of deportees and deaths at the Auschwitz concentration camp complex during the Holocaust 1941-1945, by background." Statista is a provider of market and consumer data, offering statistics and reports across 80,000 topics from more than 22,500 sources. It is a comprehensive platform that aggregates data on various subjects, including industries, markets, demographics, and more. The data primarily includes three main variables: "ethnic origins" represents the ethnicity of the victims, "Deportees" indicates the number of people deported, and "Deaths" signifies the number of people killed. The focus of this text is on creating an interactive table about ethnicity and number of people, hence the number of deportees will not be specifically utilized.
+
+```{r}
+#| echo: false
+#| warning: false
+data <- read_csv("/cloud/project/data/statistic_id1288821_number-of-deportees-and-deaths-at-auschwitz-1941-1945-by-background.csv")
+names(data)[2] <- "Deportees"
+data$Deportees <- as.numeric(gsub(",", "", data$Deportees))
+data$Deaths <- as.numeric(gsub(",", "", data$Deaths))
+
+# Define UI
+ui <- fluidPage(
+  titlePanel("Holocaust Victims at Auschwitz"),
+  sidebarLayout(
+    sidebarPanel(
+      checkboxGroupInput("selectedGroups", "Select groups:", choices = data$`ethnic origins`, selected = data$`ethnic origins`),
+      downloadButton("downloadReport", "Download Report")
+    ),
+    mainPanel(
+      plotOutput("deathPlot"),
+      DTOutput("dataTable")
+    )
+  )
+)
+
+# Define server logic
+server <- function(input, output) {
+  filteredData <- reactive({
+    data[data$`ethnic origins` %in% input$selectedGroups, ]
+  })
+  
+  output$deathPlot <- renderPlot({
+    ggplot(filteredData(), aes(x = `ethnic origins`, y = Deaths, fill = `ethnic origins`)) +
+      geom_bar(stat = "identity") +
+      theme_minimal() +
+      labs(y = "Number of Deaths", x = "", title = "Deaths by Group at Auschwitz") +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  })
+  
+  output$dataTable <- renderDT({
+    datatable(filteredData(), options = list(pageLength = 5))
+  })
+
+  output$downloadReport <- downloadHandler(
+    filename = function() {
+      paste("Auschwitz-Report-", Sys.Date(), ".pdf", sep="")
+    },
+    content = function(file) {
+      pdf(file, width = 8, height = 6)
+      print(ggplot(filteredData(), aes(x = `ethnic origins`, y = Deaths, fill = `ethnic origins`)) +
+              geom_bar(stat = "identity") +
+              theme_minimal() +
+              labs(y = "Number of Deaths", x = "", title = "Deaths by Group at Auschwitz") +
+              theme(axis.text.x = element_text(angle = 45, hjust = 1)))
+      dev.off()
+      
+      # You might need additional logic to properly render tables or other content in PDF
+    }
+  )
+}
+
+
+# Run the application
+shinyApp(ui = ui, server = server)
+```
+
+## Method
+
+The article primarily utilizes Shiny to construct an interactive application for analyzing and visualizing the tragic data of Holocaust victims at the Auschwitz concentration camp, with a particular focus on the number of deaths categorized by ethnic origins from 1941 to 1945. The user interface prominently features a "checkboxGroupInput," which allows users to select one or multiple ethnic groups whose data they wish to view, serving as the main method of interaction. Users can employ a search box to inquire about the victim numbers for specific ethnicities. The layout is organized using "sidebarLayout with sidebarPanel and mainPanel" for options like selecting ethnic groups and downloading reports. Finally, the application is launched using shinyApp, making it accessible for users to explore this crucial historical data.
+
+![Auschwitz-Report](Auschwitz-Report-2024-03-29.JPG)
+
+The figure Auschwitz-Report illustrates the style of the interactive chart. The left column serves as a checklist for selectable entities, directly influencing the main chart to the right; only the ethnic groups that are checked will be displayed. The central position is occupied by the main chart, which uses a bar graph format to tally the number of victims from each ethnicity, alongside their ethnic background. Below, there is a search box that allows users to search for ethnic groups of interest, with the results directly reflected in the bar chart.
+
+## Discussion
+
+## How to interpret the stories within the numbers.
+This chart documents the number of Holocaust victims at Auschwitz Concentration Camp by ethnic origins. Based on the data displayed, we can craft a narrative on how to use data to tell a historical story.When telling a story of history, data are not merely cold numbers; they represent real lives and encapsulate historical memories. The data from Auschwitz Concentration Camp reveals not just the number of victims but also poignantly demonstrates the brutality of the Nazi genocide policy and its impact on various ethnic groups.The interactive table provides a clear visual representation showing the number of victims among Jews, Poles, Roma/Sinti, Soviet POWs, and other ethnic origins. Through this chart, we can see that the Jewish community suffered tremendously, with numbers far exceeding other groups. Each bar in the chart has its own story; each number represents an end to a life, a family, a dream.In telling such stories, data visualization tools like this table help transform data into digestible information. The "Select groups" feature on the left side of the chart allows readers to filter for specific ethnic groups, while the detailed table at the bottom provides a breakdown of the numbers deported and killed, giving readers an in-depth understanding of the magnitude of losses for each group.For instance, by examining the chart, we not only quantify the blow to the Jewish community (1 million killed) but also observe the lesser-discussed victim groups like the Roma/Sinti, whose losses were also profound (21,000 killed).With these data, we can further explore the stories behind the numbers: Why were so many Jews killed at Auschwitz. How were the Roma/Sinti, Poles, and Soviet POWs perceived and treated? What do the individual experiences and collective histories hidden behind each number tell us about our understanding of the Holocaust.
+
+In conclusion, this chart and table present not only a statistical account of the Holocaust victims but also serve as a powerful storytelling tool, reminding us of the depth of this history and the lessons we must learn from it. Through such narratives, we are enabled to remember the people behind each number, ensuring that this chapter of history is not forgotten.
